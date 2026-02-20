@@ -2,6 +2,7 @@ const Event = require("../../Entity/Event");
 const { formatEventDate } = require("../../utilites/date.helper");
 const datasource = require("../../db-config/data-source");
 const User = require("../../Entity/User");
+const { transformEvent } = require("./merge");
 module.exports = {
 events: async () => {
     try {
@@ -18,10 +19,9 @@ events: async () => {
         },
       });
 
-      return events.map(event => ({
-        ...event,
-        date: formatEventDate(event.date),
-      }));
+      return events.map(event => {
+        return transformEvent(event);
+      });
     } catch (err) {
       console.error("Error fetching events:", err);
       throw err;
@@ -52,7 +52,8 @@ events: async () => {
         creator:req.userId
       });
 
-      return await eventRepository.save(newEvent);
+      const createdEvent = await eventRepository.save(newEvent);
+      return transformEvent(createdEvent);
     } catch (err) {
       console.error("Error creating event:", err);
       throw err;
@@ -75,7 +76,8 @@ events: async () => {
     event.description = args.eventInput.description;
     event.price = args.eventInput.price;
     event.date = new Date(args.eventInput.date);
-    return await eventRepository.save(event);
+    const updatedEvent = await eventRepository.save(event);
+    return transformEvent(updatedEvent);
     }
     catch(err){
       console.error("Error updating event:", err);
@@ -105,4 +107,3 @@ events: async () => {
   }
     
 }
-

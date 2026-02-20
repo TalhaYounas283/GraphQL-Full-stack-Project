@@ -1,8 +1,10 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../context/useAuth';
 import { useToast } from '../components/ui';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Calendar } from 'lucide-react';
+import { graphqlRequest } from '../api/graphqlClient';
+import { GET_USER_BY_ID_MUTATION, LOGIN_QUERY } from '../api/operations';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,46 +22,40 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const query = `
-    query Login($email: String!, $password: String!) {
-      login(email: $email, password: $password) {
-        token
-        userId
-        tokenExpiration
-      }
-    }
-  `;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const loginData = await graphqlRequest({
+        query: LOGIN_QUERY,
+        variables: {
+          email: formData.email,
+          password: formData.password,
         },
-        body: JSON.stringify({
-          query,
-          variables: {
-            email: formData.email,
-            password: formData.password,
-          },
-        }),
       });
-      const data = await response.json();
 
-      if (data.data && data.data.login) {
-        login({ userId: data.data.login.userId, email: formData.email }, data.data.login.token);
-        toast.success('Welcome back! Login successful');
-        navigate('/dashboard');
-      } else if (data.errors) {
-        toast.error(data.errors[0].message);
+      if (!loginData?.login) {
+        toast.error('Login failed. Please verify your credentials and try again.');
+        return;
       }
+
+      const userData = await graphqlRequest({
+        query: GET_USER_BY_ID_MUTATION,
+        token: loginData.login.token,
+        variables: { userId: loginData.login.userId },
+      });
+
+      const userName = userData?.getUserById?.name || formData.email;
+      login(
+        { userId: loginData.login.userId, email: formData.email, name: userName },
+        loginData.login.token
+      );
+      toast.success('Welcome back! Login successful');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('An error occurred during login. Please try again.');
+      toast.error(error.message || 'An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +179,7 @@ const Login = () => {
         </div>
 
         <p className="login-footer">
-          © {new Date().getFullYear()} EventHub. All rights reserved.
+          (c) {new Date().getFullYear()} EventHub. All rights reserved.
         </p>
       </div>
     </div>
@@ -191,3 +187,4 @@ const Login = () => {
 };
 
 export default Login;
+

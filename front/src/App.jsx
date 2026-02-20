@@ -9,8 +9,8 @@ import CreateEvent from './pages/CreateEvent';
 import MainLayout from './components/MainLayout';
 import { ToastProvider } from './components/ui';
 import './index.css';
-import { AuthProvider } from './context/authContext';
-
+import { AuthProvider } from './context/AuthProvider';
+import ProtectedRoutes from './components/ProtectedRoutes';
 function App() {
   return (
     <Router>
@@ -22,12 +22,14 @@ function App() {
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected Routes with MainLayout */}
-            <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/event" element={<Event />} />
-              <Route path="/events/create" element={<CreateEvent />} />
-              <Route path="/user" element={<User />} />
-              <Route path="/booking" element={<Booking />} />
+            <Route element={<ProtectedRoutes />}>
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/event" element={<Event />} />
+                <Route path="/events/create" element={<CreateEvent />} />
+                <Route path="/user" element={<User />} />
+                <Route path="/booking" element={<Booking />} />
+              </Route>
             </Route>
 
             {/* Fallback */}

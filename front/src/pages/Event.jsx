@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../context/useAuth';
 import { useToast } from '../components/ui';
 import { 
   CalendarDays, 
@@ -16,6 +16,7 @@ import {
   Filter
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Badge, LoadingSpinner } from '../components/ui';
+import { parseApiDate } from '../utils/date';
 
 const Event = () => {
   const { token, user } = useAuth();
@@ -28,7 +29,6 @@ const Event = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    category: '',
     dateRange: '',
     priceRange: ''
   });
@@ -38,8 +38,7 @@ const Event = () => {
     description: '',
     price: '',
     date: '',
-    location: '',
-    category: 'general'
+    location: ''
   });
 
   const fetchEvents = useCallback(async () => {
@@ -53,7 +52,6 @@ const Event = () => {
             description
             price
             date
-            category
             creator {
               id
               name
@@ -95,6 +93,26 @@ const Event = () => {
     fetchEvents();
   }, [fetchEvents]);
 
+  const getEventDate = (value) => parseApiDate(value);
+
+  const formatEventDateLabel = (value) => {
+    const parsedDate = getEventDate(value);
+    return parsedDate
+      ? parsedDate.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        })
+      : 'Date TBD';
+  };
+
+  const formatEventTimeLabel = (value) => {
+    const parsedDate = getEventDate(value);
+    return parsedDate
+      ? parsedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'Time TBD';
+  };
+
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     if (!token) {
@@ -104,13 +122,12 @@ const Event = () => {
 
     const requestBody = {
       query: `
-        mutation CreateEvent($title: String!, $description: String!, $price: Float!, $date: String!, $category: String, $creatorId: ID!) {
+        mutation CreateEvent($title: String!, $description: String!, $price: Float!, $date: String!, $creatorId: ID!) {
           createEvent(eventInput: {
             title: $title,
             description: $description,
             price: $price,
             date: $date,
-            category: $category,
             creatorId: $creatorId
           }) {
             id
@@ -123,7 +140,6 @@ const Event = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         date: formData.date,
-        category: formData.category,
         creatorId: user.userId || user.id
       }
     };
@@ -141,7 +157,7 @@ const Event = () => {
       if (result.data && result.data.createEvent) {
         toast.success(`Event "${result.data.createEvent.title}" created successfully!`);
         setShowModal(false);
-        setFormData({ title: '', description: '', price: '', date: '', location: '', category: 'general' });
+        setFormData({ title: '', description: '', price: '', date: '', location: '' });
         fetchEvents();
       } else if (result.errors) {
         toast.error(result.errors[0].message);
@@ -206,10 +222,6 @@ const Event = () => {
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Category match
-    const matchesCategory = filters.category === '' || 
-      event.category?.toLowerCase() === filters.category.toLowerCase();
-
     // Price range match
     let matchesPrice = true;
     if (filters.priceRange === 'free') {
@@ -224,8 +236,12 @@ const Event = () => {
 
     // Date range match
     let matchesDate = true;
-    const eventDate = new Date(Number(event.date));
+    const eventDate = getEventDate(event.date);
     const now = new Date();
+
+    if (!eventDate) {
+      return false;
+    }
     
     if (filters.dateRange === 'today') {
       matchesDate = eventDate.toDateString() === now.toDateString();
@@ -237,7 +253,7 @@ const Event = () => {
       matchesDate = eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
     }
 
-    return matchesSearch && matchesCategory && matchesPrice && matchesDate;
+    return matchesSearch && matchesPrice && matchesDate;
   };
 
   const filteredEvents = events.filter(isEventMatchingFilters);
@@ -249,7 +265,6 @@ const Event = () => {
   const handleClearFilters = () => {
     setSearchQuery('');
     setFilters({
-      category: '',
       dateRange: '',
       priceRange: ''
     });
@@ -318,22 +333,7 @@ const Event = () => {
 
       {showFilters && (
         <Card className="!p-4 bg-surface-light border-border">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-tertiary mb-1 uppercase tracking-wider">Category</label>
-              <select 
-                value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-primary outline-none"
-              >
-                <option value="">All Categories</option>
-                <option value="general">General</option>
-                <option value="conference">Conference</option>
-                <option value="workshop">Workshop</option>
-                <option value="social">Social</option>
-                <option value="sports">Sports</option>
-              </select>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-text-tertiary mb-1 uppercase tracking-wider">Date Range</label>
               <select 
@@ -385,12 +385,12 @@ const Event = () => {
         <div className="empty-state-card">
           <CalendarDays size={48} className="mx-auto" />
           <h3>
-            {searchQuery || filters.category || filters.dateRange || filters.priceRange 
+            {searchQuery || filters.dateRange || filters.priceRange 
               ? 'No matching events found' 
               : 'No events scheduled yet'}
           </h3>
           <p className="max-w-xs mx-auto mb-6">
-            {searchQuery || filters.category || filters.dateRange || filters.priceRange 
+            {searchQuery || filters.dateRange || filters.priceRange 
               ? 'Try adjusting your keywords or clearing the filters' 
               : 'Be the first to host an event and showcase it here!'}
           </p>
@@ -404,7 +404,7 @@ const Event = () => {
             <div key={event.id} className="premium-event-card">
               <div className="card-image">
                 <span className="category-badge">
-                  {event.category || 'General'}
+                  General
                 </span>
                 <span className="price-tag">
                   {event.price === 0 ? 'FREE' : `$${event.price}`}
@@ -412,11 +412,7 @@ const Event = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
                   <div className="flex items-center gap-2 text-white text-xs font-medium">
                     <CalendarDays size={14} />
-                    {new Date(Number(event.date)).toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
+                    {formatEventDateLabel(event.date)}
                   </div>
                 </div>
               </div>
@@ -429,7 +425,7 @@ const Event = () => {
                   </span>
                   <span className="date">
                     <Clock size={14} />
-                    {new Date(Number(event.date)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatEventTimeLabel(event.date)}
                   </span>
                 </div>
 
@@ -509,21 +505,6 @@ const Event = () => {
               onChange={(e) => setFormData({...formData, date: e.target.value})}
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">Pick a Category</label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="w-full px-3 py-2 bg-surface-light border border-border rounded-lg text-text-primary focus:border-primary outline-none transition-all"
-            >
-              <option value="general">General</option>
-              <option value="conference">Conference</option>
-              <option value="workshop">Workshop</option>
-              <option value="social">Social</option>
-              <option value="sports">Sports</option>
-            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border">

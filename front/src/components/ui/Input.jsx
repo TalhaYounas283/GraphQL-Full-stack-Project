@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 const Input = ({ 
   label,
@@ -10,7 +10,8 @@ const Input = ({
   rightElement,
   ...props 
 }) => {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || generatedId;
 
   return (
     <div className="form-group">

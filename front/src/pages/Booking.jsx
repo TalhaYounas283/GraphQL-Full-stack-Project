@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../context/useAuth';
 import { useToast } from '../components/ui';
 import { 
   Ticket, 
@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { Button, Card, Badge, LoadingSpinner } from '../components/ui';
+import { parseApiDate } from '../utils/date';
 
 const Booking = () => {
   const { token, user } = useAuth();
@@ -79,6 +80,18 @@ const Booking = () => {
     fetchBookings();
   }, [fetchBookings]);
 
+  const formatBookingDate = (value) => {
+    const parsedDate = parseApiDate(value);
+    return parsedDate ? parsedDate.toLocaleDateString() : 'Date TBD';
+  };
+
+  const formatEventDate = (value) => {
+    const parsedDate = parseApiDate(value);
+    return parsedDate
+      ? parsedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'Date TBD';
+  };
+
   const handleCancelBooking = async (bookingId, eventTitle) => {
     if (!window.confirm(`Are you sure you want to cancel your booking for "${eventTitle}"?`)) {
       return;
@@ -125,8 +138,13 @@ const Booking = () => {
 
     let matchesDate = true;
     if (filters.dateRange && booking.event?.date) {
-      const eventDate = new Date(Number(booking.event.date));
+      const eventDate = parseApiDate(booking.event.date);
       const now = new Date();
+
+      if (!eventDate) {
+        return false;
+      }
+
       if (filters.dateRange === 'today') {
         matchesDate = eventDate.toDateString() === now.toDateString();
       } else if (filters.dateRange === 'week') {
@@ -344,13 +362,11 @@ const Booking = () => {
                         </span>
                         <span className="tag">
                           <Calendar size={14} />
-                          {booking.event?.date 
-                            ? new Date(Number(booking.event.date)).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) 
-                            : 'Date TBD'}
+                          {formatEventDate(booking.event?.date)}
                         </span>
                         <span className="tag">
                           <Clock size={14} />
-                          Booked {new Date(booking.createdAt).toLocaleDateString()}
+                          Booked {formatBookingDate(booking.createdAt)}
                         </span>
                       </div>
                     </div>

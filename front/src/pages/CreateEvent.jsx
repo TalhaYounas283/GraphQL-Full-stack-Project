@@ -8,7 +8,6 @@ import {
   Users, 
   Tag, 
   FileText, 
-  Image,
   ArrowLeft,
   Save,
   X
@@ -27,7 +26,6 @@ const CreateEvent = () => {
     capacity: '',
     category: '',
     price: '',
-    image: null,
   });
 
   const handleChange = (e) => {
@@ -48,7 +46,7 @@ const CreateEvent = () => {
       
       toast.success('Event created successfully!');
       navigate('/dashboard');
-    } catch (error) {
+    } catch {
       toast.error('Failed to create event. Please try again.');
     } finally {
       setIsLoading(false);
@@ -290,57 +288,6 @@ const CreateEvent = () => {
                 </p>
               </div>
 
-              {/* Image Upload */}
-              <div className="form-group">
-                <label className="form-label">
-                  <Image size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                  Event Image
-                </label>
-                <div 
-                  style={{ 
-                    border: '2px dashed #e5e7eb', 
-                    borderRadius: '10px', 
-                    padding: '2rem', 
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <input
-                    type="file"
-                    name="image"
-                    accept="image/*"
-                    onChange={handleChange}
-                    style={{ display: 'none' }}
-                    id="event-image"
-                  />
-                  <label htmlFor="event-image" style={{ cursor: 'pointer' }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      backgroundColor: '#f3f4f6', 
-                      borderRadius: '12px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem'
-                    }}>
-                      <Image size={24} color="#9ca3af" />
-                    </div>
-                    <p style={{ fontWeight: 500, color: '#374151', marginBottom: '0.5rem' }}>
-                      Click to upload image
-                    </p>
-                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: 0 }}>
-                      PNG, JPG up to 5MB
-                    </p>
-                  </label>
-                </div>
-                {formData.image && (
-                  <p style={{ fontSize: '0.875rem', color: '#4f46e5', marginTop: '0.5rem' }}>
-                    Selected: {formData.image.name}
-                  </p>
-                )}
-              </div>
 
               {/* Form Actions */}
               <div className="form-actions">

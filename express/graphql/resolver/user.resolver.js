@@ -3,6 +3,7 @@ const User = require("../../Entity/User");
 const { formatEventDate } = require("../../utilites/date.helper");
 const datasource = require("../../db-config/data-source");
 const bycrypt = require("bcryptjs");
+const { transformUser } = require("./merge");
 module.exports = {
  users: async () => {
     try {
@@ -15,11 +16,9 @@ module.exports = {
         },
       });
 
-      return users.map(user => ({
-        ...user,
-        createdAt: formatEventDate(user.createdAt),
-        updatedAt: formatEventDate(user.updatedAt),
-      }));
+      return users.map(user => {
+        return transformUser(user);
+      });
     } catch (err) {
       console.error("Error fetching users:", err);
       throw err;
@@ -40,11 +39,7 @@ module.exports = {
       });
 
       const user = await userRepository.save(newUser);
-      return {
-        ...user,
-        createdAt: formatEventDate(user.createdAt),
-        updatedAt: formatEventDate(user.updatedAt),
-      };
+      return transformUser(user);
     } catch (err) {
       console.error("Error creating user:", err);
       throw err;
@@ -62,11 +57,7 @@ module.exports = {
       if (!user) {
         throw new Error("User not found");
       }
-      return {
-        ...user,
-        createdAt: formatEventDate(user.createdAt),
-        updatedAt: formatEventDate(user.updatedAt),
-      };
+      return transformUser(user);
     } catch (err) {
       console.error("Error fetching user:", err);
       throw err;
@@ -110,7 +101,8 @@ module.exports = {
       const salt = parseInt(process.env.SALT) || 10;
       user.password = await bycrypt.hash(args.userInput.password, salt);
       user.updatedAt = new Date();
-      return await userRepository.save(user);
+      const updatedUser = await userRepository.save(user);
+      return transformUser(updatedUser);
     } catch (err) {
       console.error("Error updating user:", err);
       throw err;

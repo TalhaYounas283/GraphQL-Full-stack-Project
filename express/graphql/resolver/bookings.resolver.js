@@ -3,9 +3,10 @@ const Booking = require("../../Entity/booking");
 const Event = require("../../Entity/Event");
 const User = require("../../Entity/User");
 const { formatEventDate } = require("../../utilites/date.helper");
+const { transformBooking } = require("./merge");
 
 module.exports = {
-    bookings: async (args , req) => {
+  bookings: async (args , req) => {
     try {
       if(!req.isAuth){
         throw new Error("Unauthenticated!");
@@ -19,11 +20,9 @@ module.exports = {
         },
       });
 
-      return bookings.map(booking => ({
-        ...booking,
-        createdAt: formatEventDate(booking.createdAt),
-        updatedAt: formatEventDate(booking.updatedAt),
-      }));
+      return bookings.map(booking => {
+        return transformBooking(booking);
+      });
     } catch (err) {
       console.error("Error fetching bookings:", err);
       throw err;
@@ -49,11 +48,7 @@ module.exports = {
         throw new Error("Booking not found");
       }
 
-      return {
-        ...booking,
-        createdAt: formatEventDate(booking.createdAt),
-        updatedAt: formatEventDate(booking.updatedAt),
-      };
+      return transformBooking(booking);
     } catch (err) {
       console.error("Error fetching booking:", err);
       throw err;
@@ -88,7 +83,8 @@ module.exports = {
         updatedAt: new Date(),
       });
 
-      return await bookingRepository.save(newBooking);
+      const createdBooking = await bookingRepository.save(newBooking);
+      return transformBooking(createdBooking);
     } catch (err) {
       console.error("Error creating booking:", err);
       throw err;

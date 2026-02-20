@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/authContext';
+import { useAuth } from '../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
@@ -11,6 +11,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { parseApiDate } from '../utils/date';
 
 const Dashboard = () => {
   const { token, user } = useAuth();
@@ -116,7 +117,14 @@ const Dashboard = () => {
     }
   }, [token, fetchData]);
 
-  const StatCard = ({ title, value, icon: Icon, color }) => (
+  const formatEventDate = (value) => {
+    const parsedDate = parseApiDate(value);
+    return parsedDate ? parsedDate.toLocaleDateString() : 'Date TBD';
+  };
+
+const StatCard = ({ title, value, icon: Icon, color, loading }) => {
+  const CardIcon = Icon;
+  return (
     <div className="stat-card">
       <div className="stat-content">
         <p className="stat-label">{title}</p>
@@ -128,12 +136,14 @@ const Dashboard = () => {
         className="stat-icon-wrapper"
         style={{ background: color }}
       >
-        <Icon size={24} />
+        <CardIcon size={24} />
       </div>
     </div>
   );
+};
 
-  if (error) {
+const Dashboard = () => {
+
     return (
       <div className="dashboard-container">
         <div className="error-card">
@@ -178,18 +188,21 @@ const Dashboard = () => {
           value={stats.events}
           icon={Calendar}
           color="linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+          loading={loading}
         />
         <StatCard
           title="Total Users"
           value={stats.users}
           icon={Users}
           color="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+          loading={loading}
         />
         <StatCard
           title="Total Bookings"
           value={stats.bookings}
           icon={Ticket}
           color="linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
+          loading={loading}
         />
       </div>
 
@@ -254,7 +267,7 @@ const Dashboard = () => {
                     <div className="event-meta">
                       <span className="badge badge-primary">${event.price}</span>
                       <p className="text-xs text-muted mt-1">
-                        {new Date(Number(event.date)).toLocaleDateString()}
+                        {formatEventDate(event.date)}
                       </p>
                     </div>
                   </div>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ui';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
+import { graphqlRequest } from '../api/graphqlClient';
+import { CREATE_USER_MUTATION } from '../api/operations';
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,44 +27,28 @@ const Signup = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const query = `
-      mutation CreateUser($userInput: UserInput!) {
-        createUser(userInput: $userInput) {
-          name
-          email
-        }
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query,
-          variables: {
-            userInput: {
-              name: formData.name,
-              email: formData.email,
-              password: formData.password,
-            },
+      const data = await graphqlRequest({
+        query: CREATE_USER_MUTATION,
+        variables: {
+          userInput: {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
           },
-        }),
+        },
       });
 
-      const data = await response.json();
-
-      if (data.errors) {
-        toast.error(data.errors[0].message);
-      } else {
+      if (data?.createUser) {
         toast.success('Account created successfully! Please sign in.');
         navigate('/');
+        return;
       }
+
+      toast.error('Unable to create account right now. Please try again.');
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error('An error occurred during signup. Please try again.');
+      toast.error(error.message || 'An error occurred during signup. Please try again.');
     } finally {
       setIsLoading(false);
     }
