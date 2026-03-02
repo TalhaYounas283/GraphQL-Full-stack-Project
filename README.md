@@ -82,24 +82,14 @@ npm run dev
 
 ## Environment Variables
 
-### Express Backend (.env)
-```env
-PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=password
-DB_DATABASE=graphql_db
-JWT_SECRET=your_secret_key
+Copy the example environment files and fill in your values:
+
+```bash
+cp express/.env.example express/.env
+cp nest-js/.env.example nest-js/.env
 ```
 
-### NestJS Backend (.env)
-```env
-DATABASE_URL="mysql://username:password@localhost:3306/graphql_db"
-```
-
-### Docker Environment
-The docker-compose.yml includes all necessary environment variables for containerized deployment.
+See `.env.example` files in each backend folder for required variables.
 
 ## Project Structure
 
@@ -155,12 +145,6 @@ When using Docker or running `seedAdmin.js`:
 | `npm run dev` | Run Express backend + frontend |
 | `npm run client` | Run frontend only |
 | `npm run server:express` | Run Express backend only |
-
-## Screenshots
-
-*Dashboard - Event Management Interface*
-
-*Booking System - User-friendly event booking*
 
 ## Contributing
 
