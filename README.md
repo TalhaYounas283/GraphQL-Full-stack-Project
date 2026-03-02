@@ -1,192 +1,183 @@
-# GraphQL Full-Stack Project
+# GraphQL Full-Stack Application
 
-A complete full-stack application with GraphQL APIs, featuring Express.js and NestJS backends with a Vite React frontend.
+A modern event management system built with GraphQL, featuring dual backend options (Express.js & NestJS) and a React frontend.
+
+![GraphQL](https://img.shields.io/badge/GraphQL-E10098?style=flat&logo=graphql&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+
+## Features
+
+- **User Authentication** - JWT-based authentication with role-based access (Admin/User)
+- **Event Management** - Create, view, update, and delete events
+- **Booking System** - Book events with real-time availability
+- **Dual Backend** - Choose between Express.js or NestJS
+- **Docker Support** - One-command deployment with Docker Compose
+- **Modern UI** - Responsive React frontend with CSS Modules
+
+## Tech Stack
+
+### Backend (Express.js)
+- Apollo Server Express
+- GraphQL with type definitions & resolvers
+- TypeORM for database management
+- JWT authentication with bcryptjs
+
+### Backend (NestJS - Alternative)
+- NestJS framework
+- Code-first GraphQL schema
+- Prisma ORM
+- Modular architecture
+
+### Frontend
+- React 19 with Vite
+- React Router DOM
+- CSS Modules
+- GraphQL Client
+
+## Quick Start
+
+### Option 1: Docker (Recommended)
+
+```bash
+# Clone and start all services
+git clone https://github.com/TalhaYounas283/GraphQL-Full-stack-Project.git
+cd GraphQL-Full-stack-Project
+docker-compose up --build
+```
+
+Access the app:
+- Frontend: http://localhost:5173
+- Express API: http://localhost:5000/graphql
+- PostgreSQL: localhost:5432
+
+### Option 2: Manual Setup
+
+**1. Express Backend**
+```bash
+cd express
+npm install
+# Create .env file (see Environment Variables section)
+npm start
+# Server: http://localhost:3000/graphql
+```
+
+**2. NestJS Backend (Optional)**
+```bash
+cd nest-js
+npm install
+# Create .env file
+npm run start:dev
+# Server: http://localhost:3001/graphql
+```
+
+**3. Frontend**
+```bash
+cd front
+npm install
+npm run dev
+# App: http://localhost:5173
+```
+
+## Environment Variables
+
+### Express Backend (.env)
+```env
+PORT=3000
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=password
+DB_DATABASE=graphql_db
+JWT_SECRET=your_secret_key
+```
+
+### NestJS Backend (.env)
+```env
+DATABASE_URL="mysql://username:password@localhost:3306/graphql_db"
+```
+
+### Docker Environment
+The docker-compose.yml includes all necessary environment variables for containerized deployment.
 
 ## Project Structure
 
 ```
 GraphQL/
-├── express/          # Express.js GraphQL Backend
-├── nest-js/          # NestJS GraphQL Backend  
-└── front/            # Vite React Frontend
+├── express/              # Express.js + Apollo Server
+│   ├── Entity/           # Database entities
+│   ├── graphql/          # Schema & resolvers
+│   ├── middleware/       # Auth middleware
+│   ├── Dockerfile
+│   └── seedAdmin.js      # Admin user seeder
+├── nest-js/              # NestJS backend (alternative)
+│   ├── src/
+│   ├── prisma/
+│   └── Dockerfile
+├── front/                # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── api/
+│   │   └── App.jsx
+│   └── Dockerfile
+└── docker-compose.yml
 ```
 
-## 📁 Projects
+## API Overview
 
-### 1. Express Backend (`express/`)
-- **Framework:** Express.js with Apollo Server
-- **Features:**
-  - GraphQL API with type definitions and resolvers
-  - Authentication middleware (JWT)
-  - Event management system
-  - User management
-  - Booking system
-  - Database integration with TypeORM
-- **Key Technologies:**
-  - Apollo Server Express
-  - GraphQL
-  - TypeORM
-  - JWT Authentication
-  - bcryptjs
+### Authentication
+- `login(email, password)` - User login
+- `createUser(userInput)` - Register new user
 
-**Setup:**
-```bash
-cd express
-npm install
-npm start
-```
+### Events
+- `events` - List all events
+- `event(id)` - Get single event
+- `createEvent(eventInput)` - Create event (Admin only)
+- `cancelEvent(id)` - Cancel event
 
-### 2. NestJS Backend (`nest-js/`)
-- **Framework:** NestJS with GraphQL
-- **Features:**
-  - Code-first GraphQL schema generation
-  - User management module
-  - Prisma ORM integration
-  - Modular architecture
-- **Key Technologies:**
-  - NestJS
-  - GraphQL (Code First)
-  - Prisma
-  - TypeScript
+### Bookings
+- `bookings` - List user's bookings
+- `bookEvent(eventId)` - Book an event
+- `cancelBooking(bookingId)` - Cancel a booking
 
-**Setup:**
-```bash
-cd nest-js
-npm install
-npm run start:dev
-```
+## Default Admin Account
 
-### 3. Frontend (`front/`)
-- **Framework:** React with Vite
-- **Features:**
-  - Modern React with JSX
-  - Component-based UI architecture
-  - Authentication context
-  - Event management interface
-  - Booking system UI
-  - Toast notifications
-  - Responsive design with CSS modules
-- **Key Technologies:**
-  - React 19
-  - Vite
-  - GraphQL Client
-  - React Router DOM
-  - CSS Modules
+When using Docker or running `seedAdmin.js`:
+- Email: `admin@example.com`
+- Password: `admin123`
 
-**Setup:**
-```bash
-cd front
-npm install
-npm run dev
-```
+## Scripts
 
-## 🚀 Getting Started
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Run Express backend + frontend |
+| `npm run client` | Run frontend only |
+| `npm run server:express` | Run Express backend only |
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
-- Database (configured in each backend)
+## Screenshots
 
-### Quick Start
+*Dashboard - Event Management Interface*
 
-1. **Clone the repository:**
-```bash
-git clone https://github.com/TalhaYounas283/GraphQl-Full-stack-Project-.git
-cd GraphQl-Full-stack-Project-
-```
+*Booking System - User-friendly event booking*
 
-2. **Start the Express Backend:**
-```bash
-cd express
-npm install
-# Configure your database in .env
-npm start
-```
-Server runs on `http://localhost:3000`
+## Contributing
 
-3. **Start the NestJS Backend (Optional - alternative backend):**
-```bash
-cd nest-js
-npm install
-# Configure your database in .env
-npm run start:dev
-```
-Server runs on `http://localhost:3001`
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-4. **Start the Frontend:**
-```bash
-cd front
-npm install
-npm run dev
-```
-App runs on `http://localhost:5173`
+## License
 
-## 🔧 Environment Variables
+MIT License - see [LICENSE](LICENSE) file
 
-### Express Backend
-Create `.env` in `express/`:
-```env
-PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
-DB_DATABASE=graphql_db
-JWT_SECRET=your_jwt_secret
-```
-
-### NestJS Backend
-Create `.env` in `nest-js/`:
-```env
-DATABASE_URL="mysql://username:password@localhost:3306/graphql_db"
-```
-
-## 📦 Features
-
-- **User Authentication:** JWT-based auth system
-- **Event Management:** Create, read, update, delete events
-- **Booking System:** Book events with user authentication
-- **GraphQL API:** Flexible queries and mutations
-- **Responsive UI:** Mobile-friendly design
-- **Modern Stack:** Latest React, NestJS, and Express
-
-## 🛠️ Technologies Used
-
-### Backend
-- Node.js
-- Express.js / NestJS
-- GraphQL (Apollo Server)
-- TypeORM / Prisma
-- MySQL
-- JWT Authentication
-
-### Frontend
-- React 19
-- Vite
-- React Router DOM
-- CSS Modules
-- GraphQL Client
-
-## 📝 API Documentation
-
-GraphQL Playground is available at:
-- Express: `http://localhost:3000/graphql`
-- NestJS: `http://localhost:3001/graphql`
-
-## 👤 Author
+## Author
 
 **Talha Younas**
 - GitHub: [@TalhaYounas283](https://github.com/TalhaYounas283)
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-Feel free to check the [issues page](https://github.com/TalhaYounas283/GraphQl-Full-stack-Project-/issues).
 
 ---
 
