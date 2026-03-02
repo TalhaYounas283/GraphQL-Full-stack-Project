@@ -14,6 +14,13 @@ import {
   UserPlus
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Badge, LoadingSpinner } from '../components/ui';
+import { graphqlRequest } from '../api/graphqlClient';
+import { 
+  USERS_QUERY, 
+  CREATE_USER_MUTATION, 
+  DELETE_USER_MUTATION,
+  UPDATE_USER_MUTATION 
+} from '../api/operations';
 import '../styles/User.css';
 
 const User = () => {
@@ -23,6 +30,8 @@ const User = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -32,34 +41,13 @@ const User = () => {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const query = `
-      query {
-        users {
-          id
-          name
-          email
-          events {
-            id
-          }
-          bookings {
-            id
-          }
-        }
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ query })
+      const result = await graphqlRequest({
+        query: USERS_QUERY,
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.users) {
-        setUsers(result.data.users);
+      if (result && result.users) {
+        setUsers(result.users);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -75,47 +63,70 @@ const User = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    const query = `
-      mutation CreateUser($userInput: UserInput!) {
-        createUser(userInput: $userInput) {
-          id
-          name
-          email
-        }
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          query,
-          variables: {
-            userInput: {
-              name: formData.name,
-              email: formData.email,
-              password: formData.password
-            }
+      const result = await graphqlRequest({
+        query: CREATE_USER_MUTATION,
+        variables: {
+          userInput: {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password
           }
-        })
+        },
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.createUser) {
-        toast.success(`User "${result.data.createUser.name}" created successfully!`);
+
+      if (result && result.createUser) {
+        toast.success(`User "${result.createUser.name}" created successfully!`);
         setShowModal(false);
         setFormData({ name: '', email: '', password: '' });
         fetchUsers();
-      } else if (result.errors) {
-        toast.error(result.errors[0].message);
       }
     } catch (error) {
       console.error('Error creating user:', error);
-      toast.error('Failed to create user');
+      toast.error(error.message || 'Failed to create user');
     }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await graphqlRequest({
+        query: UPDATE_USER_MUTATION,
+        variables: {
+          userId: selectedUser.id,
+          userInput: {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password
+          }
+        },
+        token: token
+      });
+
+      if (result && result.updateUser) {
+        toast.success(`User "${result.updateUser.name}" updated successfully!`);
+        setShowModal(false);
+        setFormData({ name: '', email: '', password: '' });
+        setIsEditMode(false);
+        setSelectedUser(null);
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error(error.message || 'Failed to update user');
+    }
+  };
+
+  const openEditModal = (user) => {
+    setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '' // Keep empty for security
+    });
+    setIsEditMode(true);
+    setShowModal(true);
   };
 
   const handleDeleteUser = async (userId, userName) => {
@@ -123,34 +134,20 @@ const User = () => {
       return;
     }
 
-    const query = `
-      mutation DeleteUser($userId: ID!) {
-        deleteUser(userId: $userId)
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          query,
-          variables: { userId }
-        })
+      const result = await graphqlRequest({
+        query: DELETE_USER_MUTATION,
+        variables: { userId },
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.deleteUser) {
+
+      if (result && result.deleteUser) {
         toast.success(`User "${userName}" deleted successfully!`);
         fetchUsers();
-      } else if (result.errors) {
-        toast.error(result.errors[0].message);
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast.error(error.message || 'Failed to delete user');
     }
   };
 
@@ -290,16 +287,24 @@ const User = () => {
                     </td>
                     <td>
                       <div className="user-action-group">
-                        <button className="user-action-btn edit" title="Edit user">
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          className="user-action-btn delete" 
-                          title="Delete user"
-                          onClick={() => handleDeleteUser(user.id, user.name)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {(useAuth().user?.role === 'ADMIN' || useAuth().user?.userId === user.id) && (
+                          <button 
+                            className="user-action-btn edit" 
+                            title="Edit user"
+                            onClick={() => openEditModal(user)}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {useAuth().user?.role === 'ADMIN' && (
+                          <button 
+                            className="user-action-btn delete" 
+                            title="Delete user"
+                            onClick={() => handleDeleteUser(user.id, user.name)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -313,21 +318,26 @@ const User = () => {
       {/* Add User Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Add New User"
-        description="Create a new user account"
+        onClose={() => {
+          setShowModal(false);
+          setIsEditMode(false);
+          setSelectedUser(null);
+          setFormData({ name: '', email: '', password: '' });
+        }}
+        title={isEditMode ? "Edit User" : "Add New User"}
+        description={isEditMode ? "Update user profile information" : "Create a new user account"}
         footer={
           <>
             <Button variant="outline" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateUser} leftIcon={Plus}>
-              Create User
+            <Button onClick={isEditMode ? handleUpdateUser : handleCreateUser} leftIcon={isEditMode ? Edit2 : Plus}>
+              {isEditMode ? "Update User" : "Create User"}
             </Button>
           </>
         }
       >
-        <form onSubmit={handleCreateUser} className="space-y-5">
+        <form onSubmit={isEditMode ? handleUpdateUser : handleCreateUser} className="space-y-5">
           <Input
             label="Full Name"
             placeholder="Enter user's full name"

@@ -4,6 +4,12 @@ module.exports = new EntitySchema({
   name: "User",
   tableName: "users",
   columns: {
+
+    role: {
+      type: "enum",
+      enum: ["USER", "ADMIN"],
+      default: "USER",
+    },
     id: {
       primary: true,
       type: "int",

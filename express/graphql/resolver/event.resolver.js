@@ -2,7 +2,9 @@ const Event = require("../../Entity/Event");
 const { formatEventDate } = require("../../utilites/date.helper");
 const datasource = require("../../db-config/data-source");
 const User = require("../../Entity/User");
+const Booking = require("../../Entity/booking");
 const { transformEvent } = require("./merge");
+
 module.exports = {
 events: async () => {
     try {
@@ -28,8 +30,9 @@ events: async () => {
     }
   },
 
-  createEvent: async (args , req) => {
+  createEvent: async (args , context) => {
     try {
+    const { req } = context;
     if(!req.isAuth){
       throw new Error("Unauthenticated!");
     }
@@ -60,18 +63,25 @@ events: async () => {
     }
   },
 
-  updateEvent:async(args , req)=>{
+  updateEvent:async(args , context)=>{
     try{
+       const { req } = context;
        if(!req.isAuth){
       throw new Error("Unauthenticated!");
     }
     const eventRepository = datasource.getRepository(Event);
-    const event = await eventRepository.findOneBy({
-      id: args.eventId,
+    const event = await eventRepository.findOne({
+      where: { id: args.eventId },
+      relations: { creator: true }
     });
     if (!event) {
       throw new Error("Event not found");
     }
+
+    if (req.user?.role !== "ADMIN" && event.creator.id !== req.userId) {
+      throw new Error("Unauthorized!");
+    }
+
     event.title = args.eventInput.title;
     event.description = args.eventInput.description;
     event.price = args.eventInput.price;
@@ -85,18 +95,31 @@ events: async () => {
     }
   },
 
-  deleteEvent:async(args , req)=>{
+  deleteEvent:async(args , context)=>{
     try{
+       const { req } = context;
        if(!req.isAuth){
       throw new Error("Unauthenticated!");
     }
     const eventRepository = datasource.getRepository(Event);
-    const event = await eventRepository.findOneBy({
-      id: args.eventId,
+    const bookingRepository = datasource.getRepository(Booking);
+
+    const event = await eventRepository.findOne({
+      where: { id: args.eventId },
+      relations: { creator: true }
     });
+    
     if (!event) {
       throw new Error("Event not found");
     }
+
+    if (req.user?.role !== "ADMIN" && event.creator.id !== req.userId) {
+      throw new Error("Unauthorized!");
+    }
+
+    // Manually delete bookings first to avoid foreign key constraints issues
+    await bookingRepository.delete({ event: { id: args.eventId } });
+
     await eventRepository.remove(event);
     return true;
     }

@@ -24,6 +24,7 @@ module.exports = new EntitySchema({
       target: "Event",
       inverseSide: "bookings",  
       joinColumn: true,
+      onDelete: "CASCADE",
     },
     user: {
       type: "many-to-one",

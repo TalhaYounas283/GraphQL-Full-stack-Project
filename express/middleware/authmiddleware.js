@@ -3,11 +3,15 @@ module.exports= (req ,res,next)=>{
     const authHeader = req.get('Authorization')
     if(!authHeader){
         req.isAuth = false
+        req.user = null
+        req.userId = null
         return next()
     }
     const token = authHeader.split(' ')[1]
     if(!token || token === ''){
         req.isAuth = false
+        req.user = null
+        req.userId = null
         return next()
     }
     let decodedToken;
@@ -15,15 +19,20 @@ module.exports= (req ,res,next)=>{
         decodedToken = jwt.verify(token, process.env.JWT_SECRET)
     } catch (error) {
         req.isAuth = false
+        req.user = null
+        req.userId = null
         return next()
     }
 
     if(!decodedToken){
         req.isAuth = false
+        req.user = null
+        req.userId = null
         return next()
     }
 
     req.isAuth = true
+    req.user = decodedToken
     req.userId = decodedToken.userId
     next()
 }

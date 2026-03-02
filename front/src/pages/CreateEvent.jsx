@@ -4,27 +4,28 @@ import { useToast } from '../components/ui';
 import { 
   Calendar, 
   Clock, 
-  MapPin, 
-  Users, 
-  Tag, 
   FileText, 
   ArrowLeft,
+  Users,
   Save,
-  X
+  X,
+  Tag,
+  DollarSign
 } from 'lucide-react';
+import { graphqlRequest } from '../api/graphqlClient';
+import { CREATE_EVENT_MUTATION } from '../api/operations';
+import { useAuth } from '../context/useAuth';
 
 const CreateEvent = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { token, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     date: '',
     time: '',
-    location: '',
-    capacity: '',
-    category: '',
     price: '',
   });
 
@@ -41,13 +42,31 @@ const CreateEvent = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!token) {
+        toast.error('Please login to create an event');
+        navigate('/login');
+        return;
+      }
+
+      const combinedDate = `${formData.date}T${formData.time}:00`;
+
+      await graphqlRequest({
+        query: CREATE_EVENT_MUTATION,
+        variables: {
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price) || 0,
+          date: combinedDate,
+          creatorId: user.userId || user.id
+        },
+        token: token
+      });
       
       toast.success('Event created successfully!');
       navigate('/dashboard');
-    } catch {
-      toast.error('Failed to create event. Please try again.');
+    } catch (error) {
+      console.error('Create event error:', error);
+      toast.error(error.message || 'Failed to create event. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -103,9 +122,9 @@ const CreateEvent = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="main-content">
+      <main className="main-content event-form-page">
         {/* Header */}
-        <header className="header">
+        <div className="create-event-header">
           <h1 className="header-title">Create New Event</h1>
           <div className="header-actions">
             <button 
@@ -116,11 +135,9 @@ const CreateEvent = () => {
               Back
             </button>
           </div>
-        </header>
-
+</div>
         {/* Content */}
         <div className="content">
-          <div className="event-form-page">
             <div className="event-form-header">
               <h2 className="event-form-title">Event Details</h2>
               <p className="event-form-subtitle">
@@ -201,80 +218,17 @@ const CreateEvent = () => {
                 </div>
               </div>
 
-              {/* Location */}
-              <div className="form-group">
-                <label className="form-label">
-                  <MapPin size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                  Location *
-                </label>
-                <div className="input-wrapper">
-                  <input
-                    type="text"
-                    name="location"
-                    placeholder="Enter event location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    className="form-input"
-                    style={{ paddingLeft: '1rem' }}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Category & Capacity Row */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">
-                    <Tag size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                    Category *
-                  </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">Select category</option>
-                    <option value="conference">Conference</option>
-                    <option value="workshop">Workshop</option>
-                    <option value="seminar">Seminar</option>
-                    <option value="party">Party</option>
-                    <option value="concert">Concert</option>
-                    <option value="sports">Sports</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    <Users size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                    Capacity *
-                  </label>
-                  <div className="input-wrapper">
-                    <input
-                      type="number"
-                      name="capacity"
-                      placeholder="Max attendees"
-                      value={formData.capacity}
-                      onChange={handleChange}
-                      className="form-input"
-                      style={{ paddingLeft: '1rem' }}
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Price */}
               <div className="form-group">
-                <label className="form-label">Ticket Price ($)</label>
+                <label className="form-label">
+                  <DollarSign size={16} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                  Ticket Price ($)
+                </label>
                 <div className="input-wrapper">
                   <input
                     type="number"
                     name="price"
-                    placeholder="0.00"
+                    placeholder="0.00 for Free"
                     value={formData.price}
                     onChange={handleChange}
                     className="form-input"
@@ -283,13 +237,7 @@ const CreateEvent = () => {
                     step="0.01"
                   />
                 </div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  Leave empty for free events
-                </p>
               </div>
-
-
-              {/* Form Actions */}
               <div className="form-actions">
                 <button
                   type="button"
@@ -326,7 +274,6 @@ const CreateEvent = () => {
                 </button>
               </div>
             </form>
-          </div>
         </div>
       </main>
     </div>

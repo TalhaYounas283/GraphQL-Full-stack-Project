@@ -1,6 +1,11 @@
 const { buildSchema } = require("graphql");
 
 module.exports = buildSchema(`
+    enum UserRole {
+        USER
+        ADMIN
+    }
+
     type Booking {
         id: ID!
         createdAt: String!
@@ -11,6 +16,7 @@ module.exports = buildSchema(`
 
     type User {
         id: ID!
+        role: UserRole!
         name: String!
         email: String!
         password: String!

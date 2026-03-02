@@ -22,6 +22,7 @@ module.exports = {
                 userId: user.id,
                 email: user.email,
                 name: user.name,
+                role: user.role,
             }
             const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
             return {

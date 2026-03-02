@@ -17,6 +17,14 @@ import {
 } from 'lucide-react';
 import { Button, Card, Modal, Input, Badge, LoadingSpinner } from '../components/ui';
 import { parseApiDate } from '../utils/date';
+import { 
+  EVENTS_QUERY, 
+  CREATE_EVENT_MUTATION, 
+  CREATE_BOOKING_MUTATION,
+  DELETE_EVENT_MUTATION,
+  UPDATE_EVENT_MUTATION 
+} from '../api/operations';
+import { graphqlRequest } from '../api/graphqlClient';
 
 const Event = () => {
   const { token, user } = useAuth();
@@ -24,8 +32,11 @@ const Event = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [bookingLoading, setBookingLoading] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -43,43 +54,13 @@ const Event = () => {
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
-    const requestBody = {
-      query: `
-        query {
-          events {
-            id
-            title
-            description
-            price
-            date
-            creator {
-              id
-              name
-            }
-            bookings {
-              id
-              user {
-                id
-                name
-              }
-            }
-          }
-        }
-      `
-    };
-
     try {
-      const response = await fetch("http://localhost:5000/graphql", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
-        },
-        body: JSON.stringify(requestBody)
+      const result = await graphqlRequest({
+        query: EVENTS_QUERY,
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.events) {
-        setEvents(result.data.events);
+      if (result && result.events) {
+        setEvents(result.events);
       }
     } catch (error) {
       console.error("Error fetching events:", error);
@@ -120,52 +101,75 @@ const Event = () => {
       return;
     }
 
-    const requestBody = {
-      query: `
-        mutation CreateEvent($title: String!, $description: String!, $price: Float!, $date: String!, $creatorId: ID!) {
-          createEvent(eventInput: {
-            title: $title,
-            description: $description,
-            price: $price,
-            date: $date,
-            creatorId: $creatorId
-          }) {
-            id
-            title
-          }
-        }
-      `,
-      variables: {
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        date: formData.date,
-        creatorId: user.userId || user.id
-      }
-    };
-
     try {
-      const response = await fetch("http://localhost:5000/graphql", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const result = await graphqlRequest({
+        query: CREATE_EVENT_MUTATION,
+        variables: {
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price) || 0,
+          date: formData.date,
+          creatorId: user.userId || user.id
         },
-        body: JSON.stringify(requestBody)
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.createEvent) {
-        toast.success(`Event "${result.data.createEvent.title}" created successfully!`);
+
+      if (result && result.createEvent) {
+        toast.success(`Event "${result.createEvent.title}" created successfully!`);
         setShowModal(false);
         setFormData({ title: '', description: '', price: '', date: '', location: '' });
         fetchEvents();
-      } else if (result.errors) {
-        toast.error(result.errors[0].message);
       }
     } catch (error) {
       console.error("Error creating event:", error);
-      toast.error("Failed to create event");
+      toast.error(error.message || "Failed to create event");
     }
+  };
+
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault();
+    if (!token) return;
+
+    try {
+      const result = await graphqlRequest({
+        query: UPDATE_EVENT_MUTATION,
+        variables: {
+          eventId: selectedEvent.id,
+          eventInput: {
+            title: formData.title,
+            description: formData.description,
+            price: parseFloat(formData.price) || 0,
+            date: formData.date
+          }
+        },
+        token: token
+      });
+
+      if (result && result.updateEvent) {
+        toast.success(`Event "${result.updateEvent.title}" updated successfully!`);
+        setShowModal(false);
+        setIsEditMode(false);
+        setSelectedEvent(null);
+        setFormData({ title: '', description: '', price: '', date: '', location: '' });
+        fetchEvents();
+      }
+    } catch (error) {
+      console.error("Error updating event:", error);
+      toast.error(error.message || "Failed to update event");
+    }
+  };
+
+  const openEditModal = (event) => {
+    setSelectedEvent(event);
+    setFormData({
+      title: event.title,
+      description: event.description,
+      price: event.price.toString(),
+      date: event.date.split('T')[0], // Extract date part for input
+      location: '' // Not currently in schema
+    });
+    setIsEditMode(true);
+    setShowModal(true);
   };
 
   const handleBookEvent = async (eventId) => {
@@ -175,44 +179,50 @@ const Event = () => {
     }
 
     setBookingLoading(eventId);
-    const requestBody = {
-      query: `
-        mutation CreateBooking($eventId: ID!, $userId: ID!) {
-          createBooking(eventId: $eventId, userId: $userId) {
-            id
-            event {
-              title
-            }
-          }
-        }
-      `,
-      variables: {
-        eventId,
-        userId: user.userId || user.id
-      }
-    };
-
     try {
-      const response = await fetch("http://localhost:5000/graphql", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const result = await graphqlRequest({
+        query: CREATE_BOOKING_MUTATION,
+        variables: {
+          eventId,
+          userId: user.userId || user.id
         },
-        body: JSON.stringify(requestBody)
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.createBooking) {
-        toast.success(`Successfully booked "${result.data.createBooking.event.title}"!`);
+
+      if (result && result.createBooking) {
+        toast.success(`Successfully booked "${result.createBooking.event.title}"!`);
         fetchEvents();
-      } else if (result.errors) {
-        toast.error(result.errors[0].message);
       }
     } catch (error) {
       console.error("Booking error:", error);
-      toast.error("Failed to book event");
+      toast.error(error.message || "Failed to book event");
     } finally {
       setBookingLoading(null);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm("Are you sure you want to delete this event? This will also cancel all bookings for this event.")) {
+      return;
+    }
+
+    setDeleteLoading(eventId);
+    try {
+      const result = await graphqlRequest({
+        query: DELETE_EVENT_MUTATION,
+        variables: { eventId },
+        token: token
+      });
+
+      if (result && result.deleteEvent) {
+        toast.success("Event deleted successfully");
+        fetchEvents();
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete event");
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -439,19 +449,52 @@ const Event = () => {
                     </div>
                     <span>{event.creator?.name || 'Anonymous'}</span>
                   </div>
-                  <button
-                    className={`book-now-btn ${bookingLoading === event.id ? 'loading' : ''}`}
-                    disabled={bookingLoading === event.id || event.bookings?.some(b => b.user?.id === (user?.userId || user?.id))}
-                    onClick={() => handleBookEvent(event.id)}
-                  >
-                    {bookingLoading === event.id ? (
-                      <LoadingSpinner size="sm" />
-                    ) : event.bookings?.some(b => b.user?.id === (user?.userId || user?.id)) ? (
-                      'Booked'
-                    ) : (
-                      'Join Now'
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {(user?.role === 'ADMIN' || event.creator?.id === (user?.userId || user?.id)) && (
+                          <>
+                            <button
+                              className="p-2 text-text-tertiary hover:text-primary transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(event);
+                              }}
+                              title="Edit Event"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              className="p-2 text-text-tertiary hover:text-red-500 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.id);
+                              }}
+                              title="Delete Event"
+                              disabled={deleteLoading === event.id}
+                            >
+                              {deleteLoading === event.id ? (
+                                <LoadingSpinner size="sm" />
+                              ) : (
+                                <Trash2 size={18} />
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    <button
+                      className={`book-now-btn ${bookingLoading === event.id ? 'loading' : ''}`}
+                      disabled={bookingLoading === event.id || event.bookings?.some(b => b.user?.id === (user?.userId || user?.id))}
+                      onClick={() => handleBookEvent(event.id)}
+                    >
+                      {bookingLoading === event.id ? (
+                        <LoadingSpinner size="sm" />
+                      ) : event.bookings?.some(b => b.user?.id === (user?.userId || user?.id)) ? (
+                        'Booked'
+                      ) : (
+                        'Join Now'
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -462,12 +505,17 @@ const Event = () => {
       {/* Create Event Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Host a New Event"
-        description="Share your experience with the community"
+        onClose={() => {
+          setShowModal(false);
+          setIsEditMode(false);
+          setSelectedEvent(null);
+          setFormData({ title: '', description: '', price: '', date: '', location: '' });
+        }}
+        title={isEditMode ? "Edit Event" : "Host a New Event"}
+        description={isEditMode ? "Update your event details" : "Share your experience with the community"}
         size="lg"
       >
-        <form onSubmit={handleCreateEvent} className="space-y-5">
+        <form onSubmit={isEditMode ? handleUpdateEvent : handleCreateEvent} className="space-y-5">
           <Input
             label="What is the event called?"
             placeholder="e.g., Infinite Loop Hackathon"
@@ -508,11 +556,16 @@ const Event = () => {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setShowModal(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowModal(false);
+              setIsEditMode(false);
+              setSelectedEvent(null);
+              setFormData({ title: '', description: '', price: '', date: '', location: '' });
+            }}>
               Discard
             </Button>
             <Button type="submit" className="btn-primary">
-              Launch Event
+              {isEditMode ? "Update Details" : "Launch Event"}
             </Button>
           </div>
         </form>

@@ -6,11 +6,13 @@ const { formatEventDate } = require("../../utilites/date.helper");
 const { transformBooking } = require("./merge");
 
 module.exports = {
-  bookings: async (args , req) => {
+  bookings: async (args , context) => {
     try {
+      const { req } = context;
       if(!req.isAuth){
         throw new Error("Unauthenticated!");
       }
+      
       const bookings = await datasource.getRepository(Booking).find({
         relations: {
           user: true,
@@ -29,8 +31,9 @@ module.exports = {
     }
   },
 
-  booking: async (args , req) => {
+  booking: async (args , context) => {
     try {
+      const { req } = context;
       if(!req.isAuth){
         throw new Error("Unauthenticated!");
       }
@@ -55,8 +58,9 @@ module.exports = {
     }
   },
 
-  createBooking: async (args , req) => {
+  createBooking: async (args , context) => {
     try {
+      const { req } = context;
       if(!req.isAuth){
         throw new Error("Unauthenticated!");
       }
@@ -93,8 +97,9 @@ module.exports = {
 
   
 
-  cancelBooking: async (args , req) => {
+  cancelBooking: async (args , context) => {
     try {
+      const { req } = context;
       if(!req.isAuth){
         throw new Error("Unauthenticated!");
       }

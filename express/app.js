@@ -20,11 +20,15 @@ app.use((req,res,next)=>{
 app.use(authMiddleware)
 app.use(
   "/graphql",
-  graphqlHTTP({
+  graphqlHTTP((req, res) => ({
     schema: graphqlSchema,
     rootValue: rootResolver,
     graphiql: true,
-  }),
+    context: {
+      req,
+      res,
+    },
+  })),
 );
 
 module.exports = app;

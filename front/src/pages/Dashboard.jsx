@@ -12,6 +12,28 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { parseApiDate } from '../utils/date';
+import { graphqlRequest } from '../api/graphqlClient';
+import { DASHBOARD_QUERY } from '../api/operations';
+
+const StatCard = ({ title, value, icon: Icon, color, loading }) => {
+  const CardIcon = Icon;
+  return (
+    <div className="stat-card">
+      <div className="stat-content">
+        <p className="stat-label">{title}</p>
+        <h3 className="stat-value">
+          {loading ? <LoadingSpinner size="sm" /> : value}
+        </h3>
+      </div>
+      <div 
+        className="stat-icon-wrapper"
+        style={{ background: color }}
+      >
+        <CardIcon size={24} />
+      </div>
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const { token, user } = useAuth();
@@ -27,56 +49,18 @@ const Dashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
 
   const fetchData = useCallback(async () => {
-    const query = `
-      query {
-        events {
-          id
-          title
-          description
-          price
-          date
-          creator {
-            name
-          }
-        }
-        users {
-          id
-          name
-        }
-        bookings {
-          id
-          event {
-            title
-            price
-          }
-          user {
-            name
-          }
-        }
-      }
-    `;
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ query })
+      const result = await graphqlRequest({
+        query: DASHBOARD_QUERY,
+        token: token
       });
-      const result = await response.json();
       
-      if (result.errors) {
-        setError(result.errors[0].message);
-        return;
-      }
-      
-      if (result.data) {
-        const eventsList = result.data.events || [];
-        const bookingsList = result.data.bookings || [];
-        const usersList = result.data.users || [];
+      if (result) {
+        const eventsList = result.events || [];
+        const bookingsList = result.bookings || [];
+        const usersList = result.users || [];
         
         setEvents(eventsList);
         
@@ -105,7 +89,7 @@ const Dashboard = () => {
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError(err.message || 'Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -122,28 +106,7 @@ const Dashboard = () => {
     return parsedDate ? parsedDate.toLocaleDateString() : 'Date TBD';
   };
 
-const StatCard = ({ title, value, icon: Icon, color, loading }) => {
-  const CardIcon = Icon;
-  return (
-    <div className="stat-card">
-      <div className="stat-content">
-        <p className="stat-label">{title}</p>
-        <h3 className="stat-value">
-          {loading ? <LoadingSpinner size="sm" /> : value}
-        </h3>
-      </div>
-      <div 
-        className="stat-icon-wrapper"
-        style={{ background: color }}
-      >
-        <CardIcon size={24} />
-      </div>
-    </div>
-  );
-};
-
-const Dashboard = () => {
-
+  if (error) {
     return (
       <div className="dashboard-container">
         <div className="error-card">

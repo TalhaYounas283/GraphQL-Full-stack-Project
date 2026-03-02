@@ -5,12 +5,15 @@ const datasource = require("../../db-config/data-source");
 const bycrypt = require("bcryptjs");
 const { transformUser } = require("./merge");
 module.exports = {
- users: async () => {
+ users: async (args, context) => {
     try {
+      if(!context.req.isAuth){
+        throw new Error("Unauthenticated!");
+      }
       const users = await datasource.getRepository(User).find({
         relations: {
           events: true,
-          bookings: {
+          bookings: { 
             event: true,
           },
         },
@@ -25,10 +28,10 @@ module.exports = {
     }
   },
    
-  createUser: async (args) => {
+  createUser: async (args , context) => {
     try {
       const userRepository = datasource.getRepository(User);
-    const salt = parseInt(process.env.SALT) || 10;
+      const salt = parseInt(process.env.SALT) || 10;
       const hashedPassword = await bycrypt.hash(args.userInput.password, salt);
       const newUser = userRepository.create({
         name: args.userInput.name,
@@ -45,9 +48,9 @@ module.exports = {
       throw err;
     }
   },
-  getUserById : async (args , req)=>{
+  getUserById : async (args , context)=>{
     try {
-      if(!req.isAuth){
+      if(!context.req.isAuth){
         throw new Error("Unauthenticated!");
       }
       const userRepository = datasource.getRepository(User);
@@ -64,10 +67,14 @@ module.exports = {
     }
   },
 
-  deleteUser: async (args , req) => {
+  deleteUser: async (args , context) => {
     try {
-      if(!req.isAuth){
+      if(!context.req.isAuth){
         throw new Error("Unauthenticated!");
+      }
+
+      if(context.req.user?.role !== "ADMIN"){
+        throw new Error("Unauthorized!");
       }
       const userRepository = datasource.getRepository(User);
       const user = await userRepository.findOneBy({
@@ -84,10 +91,14 @@ module.exports = {
     }
   },
 
-  updateUser: async (args , req) => {
+  updateUser: async (args , context) => {
     try {
-      if(!req.isAuth){
+      if(!context.req.isAuth){
         throw new Error("Unauthenticated!");
+      }
+
+      if (context.req.user?.role !== "ADMIN" && context.req.userId !== args.userId) {
+        throw new Error("Unauthorized!");
       }
       const userRepository = datasource.getRepository(User);
       const user = await userRepository.findOneBy({

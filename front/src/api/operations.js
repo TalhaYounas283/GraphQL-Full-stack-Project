@@ -12,6 +12,7 @@ export const GET_USER_BY_ID_MUTATION = `
   mutation GetUserById($userId: ID!) {
     getUserById(userId: $userId) {
       id
+      role
       name
       email
     }
@@ -173,3 +174,30 @@ export const CANCEL_BOOKING_MUTATION = `
   }
 `;
 
+export const DELETE_EVENT_MUTATION = `
+  mutation DeleteEvent($eventId: ID!) {
+    deleteEvent(eventId: $eventId)
+  }
+`;
+
+export const UPDATE_USER_MUTATION = `
+  mutation UpdateUser($userId: ID!, $userInput: UserInput!) {
+    updateUser(userId: $userId, userInput: $userInput) {
+      id
+      name
+      email
+    }
+  }
+`;
+
+export const UPDATE_EVENT_MUTATION = `
+  mutation UpdateEvent($eventId: ID!, $eventInput: EventInput!) {
+    updateEvent(eventId: $eventId, eventInput: $eventInput) {
+      id
+      title
+      description
+      price
+      date
+    }
+  }
+`;

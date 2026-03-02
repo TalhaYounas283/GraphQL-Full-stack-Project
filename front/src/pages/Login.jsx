@@ -47,8 +47,9 @@ const Login = () => {
       });
 
       const userName = userData?.getUserById?.name || formData.email;
+      const userRole = userData?.getUserById?.role || 'USER';
       login(
-        { userId: loginData.login.userId, email: formData.email, name: userName },
+        { userId: loginData.login.userId, email: formData.email, name: userName, role: userRole },
         loginData.login.token
       );
       toast.success('Welcome back! Login successful');

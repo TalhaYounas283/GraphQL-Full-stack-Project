@@ -27,8 +27,10 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/event" element={<Event />} />
                 <Route path="/events/create" element={<CreateEvent />} />
-                <Route path="/user" element={<User />} />
                 <Route path="/booking" element={<Booking />} />
+                <Route element={<ProtectedRoutes requiredRole="ADMIN" />}>
+                  <Route path="/user" element={<User />} />
+                </Route>
               </Route>
             </Route>
 

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge, LoadingSpinner } from '../components/ui';
 import { parseApiDate } from '../utils/date';
+import { graphqlRequest } from '../api/graphqlClient';
+import { BOOKINGS_QUERY, CANCEL_BOOKING_MUTATION } from '../api/operations';
 
 const Booking = () => {
   const { token, user } = useAuth();
@@ -32,41 +34,13 @@ const Booking = () => {
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
-    const query = `
-      query {
-        bookings {
-          id
-          createdAt
-          event {
-            id
-            title
-            price
-            date
-            creator {
-              name
-            }
-          }
-          user {
-            id
-            name
-            email
-          }
-        }
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ query })
+      const result = await graphqlRequest({
+        query: BOOKINGS_QUERY,
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.bookings) {
-        setBookings(result.data.bookings);
+      if (result && result.bookings) {
+        setBookings(result.bookings);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -97,37 +71,19 @@ const Booking = () => {
       return;
     }
 
-    const query = `
-      mutation CancelBooking($bookingId: ID!) {
-        cancelBooking(bookingId: $bookingId) {
-          id
-          title
-        }
-      }
-    `;
-
     try {
-      const response = await fetch('http://localhost:5000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          query,
-          variables: { bookingId }
-        })
+      const result = await graphqlRequest({
+        query: CANCEL_BOOKING_MUTATION,
+        variables: { bookingId },
+        token: token
       });
-      const result = await response.json();
-      if (result.data && result.data.cancelBooking) {
-        toast.success(`Booking for "${result.data.cancelBooking.title}" cancelled successfully!`);
+      if (result && result.cancelBooking) {
+        toast.success(`Booking for "${result.cancelBooking.title}" cancelled successfully!`);
         fetchBookings();
-      } else if (result.errors) {
-        toast.error(result.errors[0].message);
       }
     } catch (error) {
       console.error('Error cancelling booking:', error);
-      toast.error('Failed to cancel booking');
+      toast.error(error.message || 'Failed to cancel booking');
     }
   };
 
